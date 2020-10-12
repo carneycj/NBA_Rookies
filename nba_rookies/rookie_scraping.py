@@ -1,6 +1,7 @@
 import datetime
 import os
 import pandas as pd
+import pyodbc
 import requests
 
 from bs4 import BeautifulSoup
@@ -43,8 +44,10 @@ def create_header_df(soup):
     ]
     df_desc = pd.DataFrame(headers, columns=["feature", "description"])
     df_desc["feature"] = df_desc["feature"].apply(lambda x: x.lower())
+    df_desc.iloc[11]["feature"] = "threes"
+    df_desc.iloc[12]["feature"] = "threes_a"
     df_desc.iloc[21]["feature"] = "fg_pct"
-    df_desc.iloc[22]["feature"] = "3p_pct"
+    df_desc.iloc[22]["feature"] = "threes_pct"
     df_desc.iloc[23]["feature"] = "ft_pct"
     df_desc.iloc[24]["feature"] = "mp_pg"
     df_desc.iloc[25]["feature"] = "pts_pg"
@@ -68,8 +71,7 @@ from the website by year.
 """
 
 
-# TODO get years played
-def _career_stats(career_soup, year):
+def _career_stats(career_soup):
     """
     This function collects the number of years the rookie ends up playing and
     returns that value.
@@ -78,13 +80,14 @@ def _career_stats(career_soup, year):
         [value.text for value in tr]
         for tr in career_soup.find("tbody")("tr", {"class": "full_table"})
     ]
+    seasons = [player[4] for player in players]
+    return seasons
 
 
-# TODO add years played, year, and if retired to the correct indexes
-def rookie_stat_collect(df, season_soup, career_soup, year):
+def rookie_stat_collect(season_soup, career_soup, year):
     """
-    This function collects and organizes all of the rookie data into the
-    DataFrame.
+    This function collects and organizes all of the rookie data into a list of
+    lists.
     """
     this_year = datetime.date.today().year
 
@@ -92,31 +95,89 @@ def rookie_stat_collect(df, season_soup, career_soup, year):
         [value.text for value in tr]
         for tr in season_soup.find("tbody")("tr", {"class": "full_table"})
     ]
-    yrs_played = _career_stats(career_soup, year)
-    [player.append(str(year)) for player in players]
-    print(players)
+    seasons = _career_stats(career_soup)
+    for index, player in enumerate(players):
+        player[4] = seasons[index]  # Total seasons played by the player
+        retired = 1 if (this_year - year) > (int(seasons[index]) - 1) else 0
+        player.extend([str(year), retired])
+        for i, stat in enumerate(player):
+            if i in range(21, 28):
+                if stat:
+                    player[i] = float(stat)
+                else:
+                    player[i] = 0.0
+            elif i not in {1, 2}:
+                player[i] = int(stat)
+
+    return players
 
 
 """
 --------------------------------------------------------------------------------
-The fourth task is to join all of the data together and store it in
-'rookies_stats.csv' and into a SQL database, appending each rookie's stats row
-with the year they started.
+The fourth task is to store all the data in 'rookies_stats.csv' and into a SQL
+database.
 """
 
-# TODO
-def append_data():
-    pass
+
+def data_to_csv(df, filename):
+    """
+    This function enters all of the data into 'rookies_stats.csv', which is
+    stored in the folder 'data'.
+    """
+    df.to_csv(os.path.join("data", filename), index=False)
 
 
-# TODO
-def append_header():
-    pass
+# TODO Enter data to database
+def data_to_database(df):
+    """
+    This function takes the dataframe and enters it into a SQL Server Database.
+    The Database and the tables have already been created through SQL Queries,
+    this is just meant to enter in the data collected.
+    """
+    conn = pyodbc.connect(
+        "Driver={SQL Server};"
+        "Server=CHRIS-LAPTOP\SQLEXPRESS;"
+        "Database=rookie_stat_db;"
+        "Trusted_Connection=yes;"
+    )
+    cursor = conn.cursor()
 
+    for index, row in df.iterrows():
+        # Fill the player table
+        cursor.execute("INSERT INTO player(name) VALUES (?)", row.player)
 
-# TODO
-def to_database():
-    pass
+        # Fill the rookie_info table
+
+        player_id = cursor.execute(
+            f"SELECT id FROM player WHERE name LIKE ?", row.player
+        )
+        """
+        cursor.execute(
+            f"INSERT INTO rookie_info (player_id, debut, yr1, age, rk) VALUES (?, ?, ?, ?, ?)",
+            player_id,
+            row.debut,
+            row.yr1,
+            row.age,
+            row.rk,
+        )
+        """
+        # Fill the career table
+        sql_comm = f"INSERT INTO career (player_id, yrs, retired) VALUES (?, ?, ?)"
+        cursor.execute(
+            f"INSERT INTO career (player_id, yrs, retired) VALUES (?, ?, ?)",
+            player_id,
+            row.yrs.type("int64"),
+            row.retired.astype("int64"),
+        )
+
+        # Fill the game_stats table
+
+        # Fill the pg_stats table
+
+        # Fill the pct_stats table
+
+    conn.commit()
+    cursor.close()
 
 
 """
@@ -124,26 +185,26 @@ def to_database():
 Main body of code for the scraping of rookie data.
 """
 
-# TODO
-# Note: the year in the url is the year of the playoffs for that season
-years = [2011]  # , 2012]  # [x for x in range(2000, 2015)]
-
-url_season = (
-    f"https://www.basketball-reference.com/leagues/NBA_2011_rookies-season-stats.html"
-)
-url_career = (
-    f"https://www.basketball-reference.com/leagues/NBA_2011_rookies-career-stats.html"
-)
 
 if __name__ == "__main__":
+    # Note: the year in the url is the year of the playoffs for that season
+    years = [2010, 2011]  # [x for x in range(2000, 2015)]
+
     for count, year in enumerate(years):
+        url_season = f"https://www.basketball-reference.com/leagues/NBA_{year}_rookies-season-stats.html"
+        url_career = f"https://www.basketball-reference.com/leagues/NBA_{year}_rookies-career-stats.html"
         season_soup = create_soup(url_season)
+        career_soup = create_soup(url_career)
         if count == 0:
             df_desc = create_header_df(season_soup)
             df = pd.DataFrame(columns=df_desc["feature"])
 
-        career_soup = create_soup(url_career)
-        df.append(rookie_stat_collect(df, season_soup, career_soup, year))
+        df_year = pd.DataFrame(
+            rookie_stat_collect(season_soup, career_soup, year),
+            columns=df_desc["feature"],
+        )
+        df = df.append(df_year)
 
-    # print(df_desc)
-    # print(df)
+    data_to_csv(df, "rookies_stats.csv")
+    data_to_csv(df_desc, "rookies_stats_desc.csv")
+    data_to_database(df)
