@@ -1,4 +1,5 @@
 import datetime
+import numpy as np
 import os
 import pandas as pd
 import pyodbc
@@ -44,8 +45,8 @@ def create_header_df(soup):
     ]
     df_desc = pd.DataFrame(headers, columns=["feature", "description"])
     df_desc["feature"] = df_desc["feature"].apply(lambda x: x.lower())
-    df_desc.iloc[11]["feature"] = "threes"
-    df_desc.iloc[12]["feature"] = "threes_a"
+    df_desc.iloc[9]["feature"] = "threes"
+    df_desc.iloc[10]["feature"] = "threes_a"
     df_desc.iloc[21]["feature"] = "fg_pct"
     df_desc.iloc[22]["feature"] = "threes_pct"
     df_desc.iloc[23]["feature"] = "ft_pct"
@@ -103,11 +104,11 @@ def rookie_stat_collect(season_soup, career_soup, year):
         for i, stat in enumerate(player):
             if i in range(21, 28):
                 if stat:
-                    player[i] = float(stat)
+                    player[i] = np.float64(stat)
                 else:
-                    player[i] = 0.0
+                    player[i] = np.float64(0.0)
             elif i not in {1, 2}:
-                player[i] = int(stat)
+                player[i] = np.int64(stat)
 
     return players
 
@@ -143,15 +144,14 @@ def data_to_database(df):
     cursor = conn.cursor()
 
     for index, row in df.iterrows():
+        player_id = index + 1
+
         # Fill the player table
-        cursor.execute("INSERT INTO player(name) VALUES (?)", row.player)
+        cursor.execute(
+            "INSERT INTO player(id, name) VALUES (?, ?)", player_id, row.player
+        )
 
         # Fill the rookie_info table
-
-        player_id = cursor.execute(
-            f"SELECT id FROM player WHERE name LIKE ?", row.player
-        )
-        """
         cursor.execute(
             f"INSERT INTO rookie_info (player_id, debut, yr1, age, rk) VALUES (?, ?, ?, ?, ?)",
             player_id,
@@ -160,21 +160,55 @@ def data_to_database(df):
             row.age,
             row.rk,
         )
-        """
+
         # Fill the career table
-        sql_comm = f"INSERT INTO career (player_id, yrs, retired) VALUES (?, ?, ?)"
         cursor.execute(
             f"INSERT INTO career (player_id, yrs, retired) VALUES (?, ?, ?)",
             player_id,
-            row.yrs.type("int64"),
-            row.retired.astype("int64"),
+            row.yrs,
+            row.retired,
         )
 
         # Fill the game_stats table
+        cursor.execute(
+            f"INSERT INTO game_stats (player_id, g, mp, fg, fga, threes, threes_a, ft, fta, orb, trb, ast, stl, blk, tov, pf, pts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            player_id,
+            row.g,
+            row.mp,
+            row.fg,
+            row.fga,
+            row.threes,
+            row.threes_a,
+            row.ft,
+            row.fta,
+            row.orb,
+            row.trb,
+            row.ast,
+            row.stl,
+            row.blk,
+            row.tov,
+            row.pf,
+            row.pts,
+        )
 
         # Fill the pg_stats table
+        cursor.execute(
+            f"INSERT INTO pg_stats (player_id, mp_pg, trb_pg, ast_pg, pts_pg) VALUES (?, ?, ?, ?, ?)",
+            player_id,
+            row.mp_pg,
+            row.trb_pg,
+            row.ast_pg,
+            row.pts_pg,
+        )
 
         # Fill the pct_stats table
+        cursor.execute(
+            f"INSERT INTO pct_stats (player_id, fg_pct, threes_pct, ft_pct) VALUES (?, ?, ?, ?)",
+            player_id,
+            row.fg_pct,
+            row.threes_pct,
+            row.ft_pct,
+        )
 
     conn.commit()
     cursor.close()
@@ -203,8 +237,10 @@ if __name__ == "__main__":
             rookie_stat_collect(season_soup, career_soup, year),
             columns=df_desc["feature"],
         )
-        df = df.append(df_year)
+        df = df.append(df_year, ignore_index=True)
 
     data_to_csv(df, "rookies_stats.csv")
     data_to_csv(df_desc, "rookies_stats_desc.csv")
     data_to_database(df)
+    print("done")
+
