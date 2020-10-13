@@ -1,0 +1,31 @@
+feature,description
+rk,Rank
+player,Player
+debut,debut
+age,Player's age on February 1 of the season
+yrs,Years Played
+g,Games
+mp,Minutes Played
+fg,Field Goals
+fga,Field Goal Attempts
+threes,3-Point Field Goals
+threes_a,3-Point Field Goal Attempts
+ft,Free Throws
+fta,Free Throw Attempts
+orb,Offensive Rebounds
+trb,Total Rebounds
+ast,Assists
+stl,Steals
+blk,Blocks
+tov,Turnovers
+pf,Personal Fouls
+pts,Points
+fg_pct,Field Goal Percentage
+threes_pct,3-Point Field Goal Percentage
+ft_pct,Free Throw Percentage
+mp_pg,Minutes Played Per Game
+pts_pg,Points Per Game
+trb_pg,Total Rebounds Per Game
+ast_pg,Assists Per Game
+yr1,Rookie Year
+retired,"Is the player retired (1: yes, 0: no)"
