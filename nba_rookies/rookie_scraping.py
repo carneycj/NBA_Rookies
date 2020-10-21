@@ -102,9 +102,11 @@ def rookie_stat_collect(season_soup, career_soup, year):
         retired = 1 if (this_year - year) > (int(seasons[index]) - 1) else 0
         player.extend([str(year), retired])
         for i, stat in enumerate(player):
+            # We want to type this data so that it's easier to work with
             if i in range(21, 28):
                 if stat:
                     player[i] = np.float64(stat)
+                # We don't want nulls because pyodbc doesn't play well with them
                 else:
                     player[i] = np.float64(0.0)
             elif i not in {1, 2}:
@@ -222,7 +224,7 @@ Main body of code for the scraping of rookie data.
 
 if __name__ == "__main__":
     # Note: the year in the url is the year of the playoffs for that season
-    years = [2010, 2011]  # [x for x in range(2000, 2015)]
+    years = [x for x in range(2000, 2015)]
 
     for count, year in enumerate(years):
         url_season = f"https://www.basketball-reference.com/leagues/NBA_{year}_rookies-season-stats.html"
@@ -242,5 +244,3 @@ if __name__ == "__main__":
     data_to_csv(df, "rookies_stats.csv")
     data_to_csv(df_desc, "rookies_stats_desc.csv")
     data_to_database(df)
-    print("done")
-
