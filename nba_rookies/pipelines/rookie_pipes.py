@@ -18,6 +18,12 @@ month_map = {
 
 
 class DropColumns(BaseEstimator, TransformerMixin):
+    """
+    This class is used to take a dataframe and from the columns that you don't
+    want from it.  It accepts a list of columns that it then uses to remove the
+    appropriate features.
+    """
+
     def __init__(self, drop_cols=None):
         self.drop_cols = drop_cols
 
@@ -31,6 +37,12 @@ class DropColumns(BaseEstimator, TransformerMixin):
 
 
 class GetDebutMonth(BaseEstimator, TransformerMixin):
+    """
+    This class is used to take the player's debut information and take the month
+    from it.  This is then converted to an int, from start to end of the season
+    (not calendar year).
+    """
+
     def __init__(self):
         pass
 
@@ -44,6 +56,12 @@ class GetDebutMonth(BaseEstimator, TransformerMixin):
 
 
 class CreateLabels(BaseEstimator, TransformerMixin):
+    """
+    This is used to convert the years the player has played into the label of if
+    the player has played the number of years that you are looking into.  The
+    default is 5, but you can change the number if desired.
+    """
+
     def __init__(self, seasons=5):
         self.seasons = seasons
 
