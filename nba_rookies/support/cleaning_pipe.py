@@ -1,5 +1,11 @@
 from sklearn.base import BaseEstimator, TransformerMixin
 
+"""
+This file is used to support the rest of the project by storing all of the
+pipeline classes/functions that are needed to properly automate the cleaning of
+the data collected and whatever future data may be collected.
+"""
+
 
 month_map = {
     "oct": 0,

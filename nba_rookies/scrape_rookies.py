@@ -224,7 +224,9 @@ Main body of code for the scraping of rookie data.
 
 if __name__ == "__main__":
     # Note: the year in the url is the year of the playoffs for that season
-    years = [x for x in range(2000, 2015)]
+    START_YEAR = 2000
+    END_YEAR = 2015
+    years = [x for x in range(START_YEAR, END_YEAR)]
 
     for count, year in enumerate(years):
         url_season = f"https://www.basketball-reference.com/leagues/NBA_{year}_rookies-season-stats.html"
