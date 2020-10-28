@@ -226,7 +226,7 @@ if __name__ == "__main__":
     # Note: the year in the url is the year of the playoffs for that season
     START_YEAR = 2000
     END_YEAR = 2015
-    years = [x for x in range(START_YEAR, END_YEAR)]
+    years = [x for x in range(START_YEAR, END_YEAR + 1)]
 
     for count, year in enumerate(years):
         url_season = f"https://www.basketball-reference.com/leagues/NBA_{year}_rookies-season-stats.html"

@@ -1,3 +1,5 @@
+import numpy as np
+
 from sklearn.base import BaseEstimator, TransformerMixin
 
 """
@@ -23,11 +25,32 @@ month_map = {
 }
 
 
-class DropColumns(BaseEstimator, TransformerMixin):
+class ToPerMinute(BaseEstimator, TransformerMixin):
     """
-    This class is used to take a dataframe and from the columns that you don't
-    want from it.  It accepts a list of columns that it then uses to remove the
-    appropriate features.
+    This class is used to take a dataframe and a list of columns that need to
+    be converted to a per minute played value.  It then uses that list to
+    convert the appropriate features.
+    """
+
+    def __init__(self, to_pm=None):
+        self.to_pm = to_pm
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        X_ = X.copy()
+        for stat in self.to_pm:
+            X_[stat + "_pm"] = round(X_[stat] / X_["mp"], 5)
+            X_.fillna(0.0, inplace=True)
+        X_.drop(columns=self.to_pm, inplace=True)
+        return X_
+
+
+class DropFeatures(BaseEstimator, TransformerMixin):
+    """
+    This class is used to take a dataframe and a list of columns that you want
+    to remove.  It then uses that list to remove the appropriate features.
     """
 
     def __init__(self, drop_cols=None):
