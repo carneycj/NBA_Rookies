@@ -19,8 +19,12 @@ Please open an issue first to discuss the proposed changes.
 
 Credits
 -------
-Rookie Data Obtained from Basketball Reference (https://www.basketball-reference.com/)
+Rookie Data Obtained from Basketball Reference
+
+.. _Basketball Reference: https://www.basketball-reference.com/
 
 License
 -------
-[BSD-3-Clause](https://opensource.org/licenses/BSD-3-Clause)
+BSD-3-Clause
+
+.. _BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
