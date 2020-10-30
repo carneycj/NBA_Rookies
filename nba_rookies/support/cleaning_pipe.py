@@ -41,9 +41,27 @@ class ToPerMinute(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         X_ = X.copy()
         for stat in self.to_pm:
-            X_[stat + "_pm"] = round(X_[stat] / X_["mp"], 5)
-            X_.fillna(0.0, inplace=True)
+            X_[stat + "_pm"] = round(X_[stat] / X_["mp"], 7)
+            X_[stat + "_pm"].fillna(0.0, inplace=True)
         X_.drop(columns=self.to_pm, inplace=True)
+        return X_
+
+
+class FillNA(BaseEstimator, TransformerMixin):
+    """
+    This class is used to take a dataframe and fill all missing values in it
+    with 0, since missing values are meant to be 0 on basketball-reference.
+    """
+
+    def __init__(self):
+        pass
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        X_ = X.copy()
+        X_.drop("debut", axis=1).fillna(0.0, axis=1, inplace=True)
         return X_
 
 
