@@ -2,7 +2,6 @@ import datetime
 import numpy as np
 import os
 import pandas as pd
-import pyodbc
 import requests
 
 from bs4 import BeautifulSoup
@@ -91,6 +90,18 @@ def rookie_stat_collect(season_soup, career_soup, year):
     lists.
     """
     this_year = datetime.date.today().year
+    this_month = datetime.date.today().month
+
+    if (this_month >= 10) and (this_year != 2020):
+        """
+        We need to consider the start of the new season in october.  If I say
+        2020, that means the 2020 playoff season, so if it's after the start of
+        the new season, we need to push the year forward one.  The 2020-2021
+        season starts in December/January, so we will have to look at this again
+        once the season actually starts and handle that edge case then (since
+        they aren't totally sure when they'll start)
+        """
+        this_year += 1
 
     players = [
         [value.text for value in tr]
@@ -100,25 +111,14 @@ def rookie_stat_collect(season_soup, career_soup, year):
     for index, player in enumerate(players):
         player[4] = seasons[index]  # Total seasons played by the player
         retired = 1 if (this_year - year) > (int(seasons[index]) - 1) else 0
-        player.extend([str(year), retired])
-        for i, stat in enumerate(player):
-            # We want to type this data so that it's easier to work with
-            if i in range(21, 28):
-                if stat:
-                    player[i] = np.float64(stat)
-                # We don't want nulls because pyodbc doesn't play well with them
-                else:
-                    player[i] = np.float64(0.0)
-            elif i not in {1, 2}:
-                player[i] = np.int64(stat)
+        player.extend([int(year), retired])
 
     return players
 
 
 """
 --------------------------------------------------------------------------------
-The fourth task is to store all the data in 'rookies_stats.csv' and into a SQL
-database.
+The fourth task is to store all the raw data into a .csv.
 """
 
 
@@ -130,103 +130,21 @@ def data_to_csv(df, filename):
     df.to_csv(os.path.join("data", filename), index=False)
 
 
-# TODO Enter data to database
-def data_to_database(df):
-    """
-    This function takes the dataframe and enters it into a SQL Server Database.
-    The Database and the tables have already been created through SQL Queries,
-    this is just meant to enter in the data collected.
-    """
-    conn = pyodbc.connect(
-        "Driver={SQL Server};"
-        "Server=CHRIS-LAPTOP\SQLEXPRESS;"
-        "Database=rookie_stat_db;"
-        "Trusted_Connection=yes;"
-    )
-    cursor = conn.cursor()
-
-    for index, row in df.iterrows():
-        player_id = index + 1
-
-        # Fill the player table
-        cursor.execute(
-            "INSERT INTO player(id, name) VALUES (?, ?)", player_id, row.player
-        )
-
-        # Fill the rookie_info table
-        cursor.execute(
-            f"INSERT INTO rookie_info (player_id, debut, yr1, age, rk) VALUES (?, ?, ?, ?, ?)",
-            player_id,
-            row.debut,
-            row.yr1,
-            row.age,
-            row.rk,
-        )
-
-        # Fill the career table
-        cursor.execute(
-            f"INSERT INTO career (player_id, yrs, retired) VALUES (?, ?, ?)",
-            player_id,
-            row.yrs,
-            row.retired,
-        )
-
-        # Fill the game_stats table
-        cursor.execute(
-            f"INSERT INTO game_stats (player_id, g, mp, fg, fga, threes, threes_a, ft, fta, orb, trb, ast, stl, blk, tov, pf, pts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            player_id,
-            row.g,
-            row.mp,
-            row.fg,
-            row.fga,
-            row.threes,
-            row.threes_a,
-            row.ft,
-            row.fta,
-            row.orb,
-            row.trb,
-            row.ast,
-            row.stl,
-            row.blk,
-            row.tov,
-            row.pf,
-            row.pts,
-        )
-
-        # Fill the pg_stats table
-        cursor.execute(
-            f"INSERT INTO pg_stats (player_id, mp_pg, trb_pg, ast_pg, pts_pg) VALUES (?, ?, ?, ?, ?)",
-            player_id,
-            row.mp_pg,
-            row.trb_pg,
-            row.ast_pg,
-            row.pts_pg,
-        )
-
-        # Fill the pct_stats table
-        cursor.execute(
-            f"INSERT INTO pct_stats (player_id, fg_pct, threes_pct, ft_pct) VALUES (?, ?, ?, ?)",
-            player_id,
-            row.fg_pct,
-            row.threes_pct,
-            row.ft_pct,
-        )
-
-    conn.commit()
-    cursor.close()
-
-
 """
 --------------------------------------------------------------------------------
 Main body of code for the scraping of rookie data.
 """
 
 
-if __name__ == "__main__":
-    # Note: the year in the url is the year of the playoffs for that season
-    START_YEAR = 2000
-    END_YEAR = 2015
-    years = [x for x in range(START_YEAR, END_YEAR + 1)]
+def scrape_rookies(start_year=2000, end_year=2015):
+    """
+    This is our main function for sraping the rookies.  There are defaul values
+    for simplicity.
+
+    Note: the year in the url is the year of the playoffs for that season
+        - This means that start_year=2000 is the '99-'00 season
+    """
+    years = [x for x in range(start_year, end_year + 1)]
 
     for count, year in enumerate(years):
         url_season = f"https://www.basketball-reference.com/leagues/NBA_{year}_rookies-season-stats.html"
@@ -245,4 +163,7 @@ if __name__ == "__main__":
 
     data_to_csv(df, "rookies_stats.csv")
     data_to_csv(df_desc, "rookies_stats_desc.csv")
-    data_to_database(df)
+
+
+if __name__ == "__main__":
+    scrape_rookies()
