@@ -19,12 +19,12 @@ Please open an issue first to discuss the proposed changes.
 
 Credits
 -------
-Rookie Data Obtained from Basketball Reference
+Rookie Data Obtained from Basketball-Reference_
 
-.. _Basketball Reference: https://www.basketball-reference.com/
+.. _Basketball-Reference: https://www.basketball-reference.com/
 
 License
 -------
-BSD-3-Clause
+BSD-3-Clause_
 
 .. _BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
