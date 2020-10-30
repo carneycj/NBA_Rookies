@@ -4,7 +4,7 @@ import pyodbc
 from sklearn.pipeline import Pipeline
 
 # Support package for data cleaning
-import support.cleaning_pipe as cp
+import nba_rookies.support.cleaning_pipe as cp
 
 TO_PM = [
     "fg",
