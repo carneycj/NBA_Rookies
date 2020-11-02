@@ -22,6 +22,7 @@ month_map = {
     "jul": 9,
     "aug": 10,
     "sep": 11,
+    np.nan: 11,
 }
 
 
@@ -47,10 +48,11 @@ class ToPerMinute(BaseEstimator, TransformerMixin):
         return X_
 
 
-class FillNA(BaseEstimator, TransformerMixin):
+class GetDebutMonth(BaseEstimator, TransformerMixin):
     """
-    This class is used to take a dataframe and fill all missing values in it
-    with 0, since missing values are meant to be 0 on basketball-reference.
+    This class is used to take the player's debut information and take the month
+    from it.  This is then converted to an int, from start to end of the season
+    (not calendar year).
     """
 
     def __init__(self):
@@ -61,7 +63,27 @@ class FillNA(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         X_ = X.copy()
-        X_.drop("debut", axis=1).fillna(0.0, axis=1, inplace=True)
+        X_["debut_month"] = (
+            X_["debut"].apply(lambda month: month[:3].lower()).map(month_map)
+        )
+        return X_
+
+
+class FillNA(BaseEstimator, TransformerMixin):
+    """
+    This class is used to take a dataframe and fill all missing values in it
+    with 0, since missing values are meant to be 0 on basketball-reference.
+    """
+
+    def __init__(self, fill_value=0):
+        self.fill_value = fill_value
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X, y=None):
+        X_ = X.copy()
+        X_.fillna(self.fill_value, inplace=True)
         return X_
 
 
@@ -80,25 +102,6 @@ class DropFeatures(BaseEstimator, TransformerMixin):
     def transform(self, X, y=None):
         X_ = X.copy()
         X_.drop(columns=self.drop_cols, inplace=True)
-        return X_
-
-
-class GetDebutMonth(BaseEstimator, TransformerMixin):
-    """
-    This class is used to take the player's debut information and take the month
-    from it.  This is then converted to an int, from start to end of the season
-    (not calendar year).
-    """
-
-    def __init__(self):
-        pass
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X, y=None):
-        X_ = X.copy()
-        X_["debut"] = X_["debut"].apply(lambda month: month[:3].lower()).map(month_map)
         return X_
 
 

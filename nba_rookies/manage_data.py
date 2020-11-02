@@ -4,7 +4,7 @@ import pyodbc
 from sklearn.pipeline import Pipeline
 
 # Support package for data cleaning
-import nba_rookies.support.cleaning_pipe as cp
+import support.cleaning_pipe as cp
 
 TO_PM = [
     "fg",
@@ -42,6 +42,7 @@ def clean_data(df, to_pm=TO_PM, drop_cols=DROP_COLS, min_seasons=5):
     cleaning_pipe = Pipeline(
         [
             ("to_per_minute", cp.ToPerMinute(to_pm)),
+            ("get_month", cp.GetDebutMonth()),
             ("fill_na", cp.FillNA()),
             ("drop_columns", cp.DropFeatures(drop_cols)),
             ("create_labels", cp.CreateLabels(min_seasons)),
@@ -50,7 +51,6 @@ def clean_data(df, to_pm=TO_PM, drop_cols=DROP_COLS, min_seasons=5):
     return cleaning_pipe.fit_transform(df)
 
 
-# TODO This needs to enter the cleaned data into sql
 def data_to_database(df):
     """
     This function takes the dataframe and enters it into a SQL Server Database.
@@ -132,6 +132,23 @@ def data_to_database(df):
             row.ft_pct,
         )
 
+        # Fill the pm_stats table
+        cursor.execute(
+            f"INSERT INTO pm_stats VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            player_id,
+            row.fg_pm,
+            row.threes_pm,
+            row.ft_pm,
+            row.orb_pm,
+            row.trb_pm,
+            row.ast_pm,
+            row.stl_pm,
+            row.blk_pm,
+            row.tov_pm,
+            row.pf_pm,
+            row.pts_pm,
+        )
+
     conn.commit()
     cursor.close()
 
@@ -145,6 +162,11 @@ def manage_data(filename="rookies_stats.csv"):
     dirty_rookies = pd.read_csv(os.path.join("data", filename))
     cleaned_rookies = clean_data(dirty_rookies)
     cleaned_rookies.to_csv(os.path.join("data", f"cleaned_{filename}"))
+
+    drop_for_join = ["rk", "player", "age", "mp", "fg_pct", "threes_pct", "ft_pct"]
+    dirty_rookies.drop(drop_for_join, axis=1, inplace=True)
+    rookie_data = dirty_rookies.join(cleaned_rookies, on=dirty_rookies.index)
+    data_to_database(rookie_data)
 
 
 if __name__ == "__main__":
